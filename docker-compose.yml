@@ -1,0 +1,48 @@
+# ============================================================
+# AsistenciaApp · Despliegue con Docker
+# Uso:
+#   docker compose up -d --build
+#   docker compose exec backend npm run sembrar   (primera vez)
+# App: http://localhost:8080
+# ============================================================
+services:
+  basedatos:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: asistenciaapp
+    volumes:
+      - datos_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@basedatos:5432/asistenciaapp
+      JWT_SECRETO: ${JWT_SECRETO:-cambia_esta_clave_en_produccion}
+      CLAVE_CIFRADO: ${CLAVE_CIFRADO:-0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef}
+      PUERTO: 4000
+      URL_FRONTEND: ${URL_FRONTEND:-http://localhost:8080}
+      CORREO_HOST: ${CORREO_HOST:-}
+      CORREO_PUERTO: ${CORREO_PUERTO:-587}
+      CORREO_USUARIO: ${CORREO_USUARIO:-}
+      CORREO_CONTRASENA: ${CORREO_CONTRASENA:-}
+      CORREO_REMITENTE: ${CORREO_REMITENTE:-AsistenciaApp <no-responder@asistenciaapp.co>}
+    volumes:
+      - ./db:/db:ro          # el script de siembra lee /db/init.sql
+    depends_on:
+      basedatos:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  datos_pg:

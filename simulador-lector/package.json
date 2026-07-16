@@ -1,0 +1,7 @@
+{
+  "name": "asistenciaapp-simulador-lector",
+  "version": "1.0.0",
+  "description": "Simulador del lector biometrico ZKTeco K50 - emula el protocolo PUSH hacia el backend",
+  "main": "simulador.js",
+  "scripts": { "start": "node simulador.js" }
+}

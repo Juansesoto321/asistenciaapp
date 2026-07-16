@@ -1,0 +1,8 @@
+-- ============================================================
+-- AsistenciaApp · Datos semilla para demostración
+-- Contraseñas: Admin123* / Instructor123* / Aprendiz123*
+-- (los hashes se generan al ejecutar backend/src/scripts/sembrar.js)
+-- Este archivo documenta los datos; la siembra real la hace el script Node
+-- para poder generar los hashes bcrypt correctamente.
+-- ============================================================
+-- Ver: backend/src/scripts/sembrar.js
