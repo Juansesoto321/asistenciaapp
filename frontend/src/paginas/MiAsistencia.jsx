@@ -25,7 +25,7 @@ export default function MiAsistencia() {
   const cargar = (idFicha) =>
     api(`/reportes/mi-historial${idFicha ? `?id_ficha=${idFicha}` : ""}`)
       .then(setDatos).catch((e) => setMensaje({ tipo: "error", texto: e.message }));
-  useEffect(() => cargar(), []);
+  useEffect(() => { cargar(); }, []);
 
   if (!datos) return <div className="vacio">Cargando…</div>;
   const r = datos.resumen;
