@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../servicios/api";
+import IconoHuella from "../componentes/IconoHuella.jsx";
 
 export default function Registrarse() {
   const [f, setF] = useState({ nombres: "", apellidos: "", tipo_documento: "CC", documento: "", correo: "", telefono: "", contrasena: "", rol: "aprendiz" });
@@ -18,7 +19,7 @@ export default function Registrarse() {
   return (
     <div className="pantalla-acceso">
       <div className="tarjeta-acceso" style={{ maxWidth: 480 }}>
-        <div className="logo-acceso">🫆</div>
+        <div className="logo-acceso"><IconoHuella size="1em" /></div>
         <h1>Crear cuenta</h1>
         <p className="subtitulo">Tu solicitud quedará pendiente hasta que un administrador la apruebe</p>
         {mensaje && <div className={`mensaje ${mensaje.tipo}`}>{mensaje.texto}</div>}

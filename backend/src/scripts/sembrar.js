@@ -36,11 +36,11 @@ async function main() {
   );
 
   const aprendices = [
-    ["Julieth Camila", "Peña Mahecha", "1027524931", "julieth.pena@soy.sena.edu.co"],
-    ["Julian Felipe", "Becerra Villalobo", "1027524932", "julian.becerra@soy.sena.edu.co"],
-    ["Juan Sebastian", "Soto Moreno", "1027524933", "juan.soto@soy.sena.edu.co"],
-    ["Santiago", "Bermudez Torres", "1027524934", "santiago.bermudez@soy.sena.edu.co"],
-    ["Yordan Hernando", "Mendez Beltran", "1027524935", "yordan.mendez@soy.sena.edu.co"],
+    ["Julieth Camila", "Peña Mahecha", "1016716963", "camilap.m1230@gmail.com"],
+    ["Julian Felipe", "Becerra Villalobo", "1027524931", "becerravillalobos08@gmail.com"],
+    ["Juan Sebastian", "Soto Moreno", "1192771015", "juansesoto321@gmail.com"],
+    ["Santiago", "Bermudez Torres", "1019764503", "santibermudez0656@gmail.com"],
+    ["Yordan Hernando", "Mendez Beltran", "1021675228", "hernandomendezlol@gmail.com"],
   ];
   const idsAprendices = [];
   for (const [n, a, d, c] of aprendices) {
@@ -73,7 +73,7 @@ async function main() {
   );
   await pool.query(
     `INSERT INTO dispositivo (serial, modelo, id_ambiente, clave_api, estado)
-     VALUES ('LECTOR-001','ZKTeco K50 (simulado)',$1,'clave-simulador-demo','no_verificado')`,
+     VALUES ('LECTOR-001','ZKTeco SenseFace 2A (simulado)',$1,'clave-simulador-demo','no_verificado')`,
     [ambiente.rows[0].id_ambiente]
   );
 
@@ -92,11 +92,11 @@ Datos sembrados correctamente.
 CUENTAS DE DEMOSTRACIÓN
   Administrador:  admin@sena.edu.co               / Admin123*
   Instructor:     cristian.buitrago@sena.edu.co   / Instructor123*
-  Aprendices:     julieth.pena@soy.sena.edu.co    / Aprendiz123*
-                  julian.becerra@soy.sena.edu.co  / Aprendiz123*
-                  juan.soto@soy.sena.edu.co       / Aprendiz123*
-                  santiago.bermudez@soy.sena.edu.co / Aprendiz123*
-                  yordan.mendez@soy.sena.edu.co   / Aprendiz123*
+  Aprendices:     camilap.m1230@gmail.com           / Aprendiz123*
+                  becerravillalobos08@gmail.com     / Aprendiz123*
+                  juansesoto321@gmail.com           / Aprendiz123*
+                  santibermudez0656@gmail.com       / Aprendiz123*
+                  hernandomendezlol@gmail.com       / Aprendiz123*
 
 LECTOR SIMULADO
   Serial: LECTOR-001 · Clave API: clave-simulador-demo · Ambiente: 201

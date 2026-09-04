@@ -1,5 +1,9 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import { obtenerSesion, cerrarSesion } from "../servicios/api";
+import IconoHuella from "./IconoHuella.jsx";
+import IconoSoporte from "./IconoSoporte.jsx";
+
+const SOPORTE = <IconoSoporte />;
 
 const MENUS = {
   administrador: [
@@ -13,7 +17,7 @@ const MENUS = {
     ["/reportes", "🔎", "Reportes"],
     ["/configuracion", "⚙️", "Configuración"],
     ["/notificaciones", "🔔", "Notificaciones"],
-    ["/soporte", "🛟", "Soporte"],
+    ["/soporte", SOPORTE, "Soporte"],
   ],
   instructor: [
     ["/panel", "📊", "Panel"],
@@ -23,14 +27,14 @@ const MENUS = {
     ["/justificaciones", "📄", "Justificaciones"],
     ["/reportes", "🔎", "Reportes"],
     ["/notificaciones", "🔔", "Notificaciones"],
-    ["/soporte", "🛟", "Soporte"],
+    ["/soporte", SOPORTE, "Soporte"],
   ],
   aprendiz: [
     ["/panel", "📊", "Panel"],
     ["/mi-asistencia", "🗒️", "Mi asistencia"],
     ["/notificaciones", "🔔", "Notificaciones"],
     ["/perfil", "👤", "Mi perfil"],
-    ["/soporte", "🛟", "Soporte"],
+    ["/soporte", SOPORTE, "Soporte"],
   ],
 };
 
@@ -42,7 +46,7 @@ export default function Diseno({ children }) {
     <div className="aplicacion">
       <aside className="barra-lateral">
         <div className="marca">
-          <div className="icono">🫆</div>
+          <div className="icono"><IconoHuella size="1.3em" /></div>
           <div>
             AsistenciaApp
             <small>SENA · Control de asistencia</small>

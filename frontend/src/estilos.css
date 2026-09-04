@@ -35,6 +35,10 @@ input, select, textarea {
   font: inherit; width: 100%; padding: 10px 12px; border: 1.5px solid var(--borde);
   border-radius: 10px; background: var(--blanco); color: var(--tinta);
 }
+/* El navegador pinta las <option> con su propio fondo del sistema, sin heredar
+   fondos translúcidos/oscuros del <select> — se fija explícito para que nunca
+   quede texto invisible (blanco sobre blanco) en ningún desplegable. */
+select option { background: var(--blanco); color: var(--tinta); }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--violeta-500); border-color: transparent; }
 label { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-suave); margin: 12px 0 4px; }
 
@@ -57,6 +61,7 @@ label { display: block; font-size: 13px; font-weight: 600; color: var(--tinta-su
   background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.18); color: #fff;
 }
 .tarjeta-acceso input::placeholder { color: #a79ce0; }
+.tarjeta-acceso select option { background: var(--violeta-950); color: #fff; }
 .logo-acceso {
   width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 15px;
   background: var(--gradiente); display: grid; place-items: center; font-size: 26px;

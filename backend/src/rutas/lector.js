@@ -13,21 +13,31 @@ const router = express.Router();
 
 // Middleware: autenticar dispositivo por serial + clave API
 async function autenticarDispositivo(req, res, next) {
-  const serial = req.headers["x-serial"];
-  const clave = req.headers["x-clave-api"];
-  const r = await pool.query("SELECT * FROM dispositivo WHERE serial = $1 AND clave_api = $2", [serial, clave]);
-  if (!r.rows[0]) return res.status(401).json({ mensaje: "Dispositivo no autorizado" });
-  req.dispositivo = r.rows[0];
-  next();
+  try {
+    const serial = req.headers["x-serial"];
+    const clave = req.headers["x-clave-api"];
+    const r = await pool.query("SELECT * FROM dispositivo WHERE serial = $1 AND clave_api = $2", [serial, clave]);
+    if (!r.rows[0]) return res.status(401).json({ mensaje: "Dispositivo no autorizado" });
+    req.dispositivo = r.rows[0];
+    next();
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ mensaje: "Error autenticando el dispositivo" });
+  }
 }
 
 // CU-09: heartbeat del lector
 router.post("/heartbeat", autenticarDispositivo, async (req, res) => {
-  await pool.query(
-    "UPDATE dispositivo SET estado = 'en_linea', ultimo_heartbeat = NOW() WHERE id_dispositivo = $1",
-    [req.dispositivo.id_dispositivo]
-  );
-  res.json({ ok: true });
+  try {
+    await pool.query(
+      "UPDATE dispositivo SET estado = 'en_linea', ultimo_heartbeat = NOW() WHERE id_dispositivo = $1",
+      [req.dispositivo.id_dispositivo]
+    );
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ mensaje: "Error en el heartbeat" });
+  }
 });
 
 // CU-13: el lector envia una lectura de huella
@@ -39,10 +49,10 @@ router.post("/marcacion", autenticarDispositivo, async (req, res) => {
     // 1. Buscar la sesion ACTIVA de hoy en el ambiente de este lector (CU-12 precondicion)
     const sesion = await pool.query(
       `SELECT s.id_sesion, s.hora_apertura, h.id_ficha, h.hora_inicio
-       FROM sesion_clase s
-       JOIN horario h ON h.id_horario = s.id_horario
-       WHERE h.id_ambiente = $1 AND s.fecha = CURRENT_DATE AND s.estado = 'activa'
-       ORDER BY s.hora_apertura DESC LIMIT 1`,
+      FROM sesion_clase s
+      JOIN horario h ON h.id_horario = s.id_horario
+      WHERE h.id_ambiente = $1 AND s.fecha = CURRENT_DATE AND s.estado = 'activa'
+      ORDER BY s.hora_apertura DESC LIMIT 1`,
       [d.id_ambiente]
     );
     if (!sesion.rows[0])
@@ -52,10 +62,10 @@ router.post("/marcacion", autenticarDispositivo, async (req, res) => {
     // 2. Matching 1:N contra las plantillas de los aprendices matriculados en la ficha
     const plantillas = await pool.query(
       `SELECT pb.*, u.id_usuario, u.nombres, u.apellidos
-       FROM plantilla_biometrica pb
-       JOIN usuario u ON u.id_usuario = pb.id_aprendiz
-       JOIN matricula m ON m.id_aprendiz = u.id_usuario AND m.estado = 'activa'
-       WHERE m.id_ficha = $1`,
+      FROM plantilla_biometrica pb
+      JOIN usuario u ON u.id_usuario = pb.id_aprendiz
+      JOIN matricula m ON m.id_aprendiz = u.id_usuario AND m.estado = 'activa'
+      WHERE m.id_ficha = $1`,
       [s.id_ficha]
     );
     const templateLeido = generarTemplateSimulado(lectura);
@@ -82,9 +92,9 @@ router.post("/marcacion", autenticarDispositivo, async (req, res) => {
     // 4. Registrar (UNIQUE evita duplicados — regla CU-13 A2)
     const insercion = await pool.query(
       `INSERT INTO asistencia (id_sesion, id_aprendiz, estado, hora_marca, metodo)
-       VALUES ($1,$2,$3,NOW(),'huella')
-       ON CONFLICT (id_sesion, id_aprendiz) DO NOTHING
-       RETURNING id_asistencia`,
+      VALUES ($1,$2,$3,NOW(),'huella')
+      ON CONFLICT (id_sesion, id_aprendiz) DO NOTHING
+      RETURNING id_asistencia`,
       [s.id_sesion, aprendiz.id_usuario, estado]
     );
     if (!insercion.rows[0])

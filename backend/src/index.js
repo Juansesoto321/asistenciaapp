@@ -9,6 +9,12 @@ const http = require("http");
 const pool = require("./config/db");
 const tiempoReal = require("./servicios/tiempoReal");
 
+// Red de seguridad: un error sin capturar en cualquier ruta no debe tumbar
+// todo el servidor (le paso a varias rutas ya endurecidas, pero esto cubre
+// cualquier otra que se nos escape).
+process.on("unhandledRejection", (err) => console.error("Rechazo no manejado:", err));
+process.on("uncaughtException", (err) => console.error("Excepción no capturada:", err));
+
 const app = express();
 const servidor = http.createServer(app);
 tiempoReal.inicializar(servidor);
@@ -30,6 +36,18 @@ app.use("/api/reportes", require("./rutas/reportes"));
 // Routers montados en /api (requieren token): SIEMPRE al final
 app.use("/api", require("./rutas/academico"));
 app.use("/api", require("./rutas/varios"));
+
+// Protocolo real ZKTeco PUSH/ADMS (lectores fisicos como el SenseFace 2A).
+// Rutas fijas por el protocolo: no llevan prefijo /api.
+app.use("/iclock", require("./rutas/adms"));
+
+// ---- ESPIA TEMPORAL: registra cualquier otra peticion no reconocida ----
+app.all(/.*/, (req, res) => {
+  console.log("\n=== PETICION SIN RUTA REGISTRADA ===");
+  console.log("Metodo:", req.method, "| URL:", req.originalUrl);
+  console.log("=====================================\n");
+  res.status(200).send("OK");
+});
 
 // ---- Tareas programadas ----
 // 1. Vencer justificaciones fuera de la ventana de 72 horas

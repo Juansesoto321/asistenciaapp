@@ -6,7 +6,7 @@ export default function Ambientes() {
   const [periodos, setPeriodos] = useState([]);
   const [modal, setModal] = useState(null); // 'ambiente' | {lector: ambiente}
   const [f, setF] = useState({ numero_ambiente: "", sede_centro: "", id_periodo: "" });
-  const [lector, setLector] = useState({ serial: "", modelo: "ZKTeco K50" });
+  const [lector, setLector] = useState({ serial: "", modelo: "ZKTeco SenseFace 2A" });
   const [claveGenerada, setClaveGenerada] = useState(null);
   const [mensaje, setMensaje] = useState(null);
 
@@ -47,7 +47,7 @@ export default function Ambientes() {
               <td>{a.serial ? `${a.serial} · ${a.modelo}` : "—"}</td>
               <td>{a.serial ? <span className={`insignia ${a.estado_dispositivo}`}>{a.estado_dispositivo.replaceAll("_", " ")}</span> : "—"}</td>
               <td>{a.ultimo_heartbeat ? new Date(a.ultimo_heartbeat).toLocaleTimeString("es-CO") : "—"}</td>
-              <td>{!a.serial && <button className="boton mini" onClick={() => { setModal({ lector: a }); setClaveGenerada(null); setLector({ serial: "", modelo: "ZKTeco K50" }); }}>+ Asociar lector</button>}</td>
+              <td>{!a.serial && <button className="boton mini" onClick={() => { setModal({ lector: a }); setClaveGenerada(null); setLector({ serial: "", modelo: "ZKTeco SenseFace 2A" }); }}>+ Asociar lector</button>}</td>
             </tr>
           ))}
           {!ambientes.length && <tr><td colSpan={6}><div className="vacio">No hay ambientes registrados.</div></td></tr>}

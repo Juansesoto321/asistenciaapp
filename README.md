@@ -11,8 +11,8 @@ Plataforma web que automatiza el registro de asistencia de aprendices mediante l
 
 ```
 ┌─────────────┐  PUSH (HTTP)   ┌──────────────┐  Socket.IO   ┌──────────────┐
-│ Lector K50  │ ─────────────► │   Backend    │ ───────────► │  Frontend    │
-│ (simulado)  │  marcaciones   │ Node/Express │  tiempo real │  React+Vite  │
+│ Lector real │ ─────────────► │   Backend    │ ───────────► │  Frontend    │
+│ SenseFace 2A│  marcaciones   │ Node/Express │  tiempo real │  React+Vite  │
 └─────────────┘  + heartbeat   └──────┬───────┘              └──────────────┘
                                       │ pg
                                ┌──────▼───────┐
@@ -86,11 +86,11 @@ Sin SMTP, los correos se imprimen en la consola del backend (útil para la demo)
 |---|---|---|
 | Administrador | admin@sena.edu.co | Admin123* |
 | Instructor | cristian.buitrago@sena.edu.co | Instructor123* |
-| Aprendiz | julieth.pena@soy.sena.edu.co | Aprendiz123* |
-| Aprendiz | julian.becerra@soy.sena.edu.co | Aprendiz123* |
-| Aprendiz | juan.soto@soy.sena.edu.co | Aprendiz123* |
-| Aprendiz | santiago.bermudez@soy.sena.edu.co | Aprendiz123* |
-| Aprendiz | yordan.mendez@soy.sena.edu.co | Aprendiz123* |
+| Aprendiz | camilap.m1230@gmail.com | Aprendiz123* |
+| Aprendiz | becerravillalobos08@gmail.com | Aprendiz123* |
+| Aprendiz | juansesoto321@gmail.com | Aprendiz123* |
+| Aprendiz | santibermudez0656@gmail.com | Aprendiz123* |
+| Aprendiz | hernandomendezlol@gmail.com | Aprendiz123* |
 
 **Lector sembrado:** serial `LECTOR-001`, clave API `clave-simulador-demo`, ambiente 201, ficha 3311983.
 
@@ -98,19 +98,21 @@ Sin SMTP, los correos se imprimen en la consola del backend (útil para la demo)
 
 1. **Admin** → Fichas → ficha 3311983 → *Enrolar huella* de un aprendiz (consentimiento → 2 capturas → plantilla cifrada AES-256).
 2. **Instructor** → Sesiones de hoy → *Iniciar sesión de hoy* → queda en la vista de supervisión en vivo.
-3. En el **simulador**, escribe el documento del aprendiz (ej. `1027524931`): la fila se actualiza **en tiempo real** con presente/tardanza según los 15 min de tolerancia. Prueba `9999999999` para ver la alerta de huella no reconocida.
+3. En el **simulador**, escribe el documento del aprendiz (ej. `1016716963`): la fila se actualiza **en tiempo real** con presente/tardanza según los 15 min de tolerancia. Prueba `9999999999` para ver la alerta de huella no reconocida.
 4. Registra a otro aprendiz con **✍ Manual** (motivo obligatorio, queda en auditoría).
 5. **⏹ Cerrar sesión**: los no marcados quedan ausentes y en la consola del backend aparece el **correo simulado** con el enlace de justificación (72 h).
 6. Abre ese enlace `/justificar/<token>` en el navegador → envía la excusa con adjunto.
 7. **Instructor** → Justificaciones → *Aprobar* → la ausencia pasa a **justificada**.
-8. **Aprendiz** (julieth.pena) → *Mi asistencia*: anillo de porcentaje y alerta si baja del 80 %.
+8. **Aprendiz** (Julieth Camila) → *Mi asistencia*: anillo de porcentaje y alerta si baja del 80 %.
 
 ## Del simulador al lector real
 
-El backend expone el contrato que consume el dispositivo (`/api/lector/heartbeat` y `/api/lector/marcacion`, autenticado con `x-serial` + `x-clave-api`). El simulador implementa ese contrato por consola. Cuando se adquiera el hardware:
+El backend expone dos contratos que puede consumir un dispositivo:
 
-- **Aula:** ZKTeco **K50** (o MA300 para exteriores) conectado por TCP/IP con protocolo PUSH/ADMS → se implementa un pequeño adaptador que traduce los eventos PUSH a `POST /api/lector/marcacion`. El backend **no cambia**.
-- **Enrolamiento:** enrolador USB ZKTeco **ZK9500** con su SDK → reemplaza la función `capturar()` del asistente de enrolamiento del frontend.
+- **Simulado** (`/api/lector/heartbeat` y `/api/lector/marcacion`, autenticado con `x-serial` + `x-clave-api`) → lo implementa por consola `simulador-lector/simulador.js`, útil para demostrar el sistema sin hardware.
+- **Real** (`/iclock/*`) → adaptador propio del protocolo propietario **PUSH/ADMS de ZKTeco**, en `backend/src/rutas/adms.js`. Ya integrado y probado con un **ZKTeco SenseFace 2A** (huella + rostro) real: el equipo hace el matching biométrico por sí mismo y solo envía el PIN del usuario ya identificado, que el backend hace corresponder con el número de documento (`usuario.documento`). El backend nunca recibe ni guarda una huella o rostro real, solo el evento ya identificado.
+
+El aprendiz se matricula en el propio dispositivo usando como PIN su número de documento; el enrolamiento biométrico en sí (capturar el dedo o el rostro) se hace directamente en el equipo, no desde esta plataforma web.
 
 ## Seguridad y Ley 1581/2012
 
@@ -127,7 +129,8 @@ asistenciaapp/
 ├── backend/
 │   ├── src/index.js             # Servidor + tareas programadas (72h, heartbeats)
 │   ├── src/rutas/               # auth, usuarios, academico, biometria, lector,
-│   │                            # sesiones, justificaciones, reportes, varios
+│   │                            # adms (lector real), sesiones, justificaciones,
+│   │                            # reportes, varios
 │   ├── src/servicios/           # cifrado AES-256, correo, tiempo real, auditoría
 │   └── src/scripts/sembrar.js   # npm run sembrar
 ├── frontend/src/paginas/        # 19 vistas (admin, instructor, aprendiz, públicas)

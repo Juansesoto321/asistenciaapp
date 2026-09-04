@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, guardarSesion } from "../servicios/api";
+import IconoHuella from "../componentes/IconoHuella.jsx";
 
 export default function IniciarSesion() {
   const navegar = useNavigate();
@@ -29,7 +30,7 @@ export default function IniciarSesion() {
   return (
     <div className="pantalla-acceso">
       <div className="tarjeta-acceso">
-        <div className="logo-acceso">🫆</div>
+        <div className="logo-acceso"><IconoHuella size="1em" /></div>
         <h1>AsistenciaApp</h1>
         <p className="subtitulo">Control de asistencia con huella digital · SENA</p>
         {mensaje && <div className={`mensaje ${mensaje.tipo}`}>{mensaje.texto}</div>}

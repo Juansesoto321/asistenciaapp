@@ -23,6 +23,8 @@ export default function Fichas() {
   }, []);
 
   async function crear() {
+    if (!f.numero_ficha.trim() || !f.programa.trim() || !f.fecha_inicio || !f.fecha_fin || !f.id_periodo || !f.id_instructor)
+      return setMensaje({ tipo: "error", texto: "Completa todos los campos: son obligatorios" });
     try {
       await api("/fichas", { method: "POST", body: f });
       setMensaje({ tipo: "exito", texto: "Ficha creada" }); setModal(false); setF(VACIA); cargar();
@@ -61,7 +63,7 @@ export default function Fichas() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>Nueva ficha</h2>
             <div className="rejilla-2">
-              <div><label>Número de ficha</label><input value={f.numero_ficha} onChange={(e) => setF({ ...f, numero_ficha: e.target.value })} /></div>
+              <div><label>Número de ficha *</label><input required value={f.numero_ficha} onChange={(e) => setF({ ...f, numero_ficha: e.target.value })} /></div>
               <div>
                 <label>Jornada</label>
                 <select value={f.jornada} onChange={(e) => setF({ ...f, jornada: e.target.value })}>
@@ -70,23 +72,23 @@ export default function Fichas() {
                 </select>
               </div>
             </div>
-            <label>Programa de formación</label>
-            <input value={f.programa} onChange={(e) => setF({ ...f, programa: e.target.value })} placeholder="Análisis y Desarrollo de Software" />
+            <label>Programa de formación *</label>
+            <input required value={f.programa} onChange={(e) => setF({ ...f, programa: e.target.value })} placeholder="Análisis y Desarrollo de Software" />
             <div className="rejilla-2">
-              <div><label>Fecha inicio</label><input type="date" value={f.fecha_inicio} onChange={(e) => setF({ ...f, fecha_inicio: e.target.value })} /></div>
-              <div><label>Fecha fin</label><input type="date" value={f.fecha_fin} onChange={(e) => setF({ ...f, fecha_fin: e.target.value })} /></div>
+              <div><label>Fecha inicio *</label><input required type="date" value={f.fecha_inicio} onChange={(e) => setF({ ...f, fecha_inicio: e.target.value })} /></div>
+              <div><label>Fecha fin *</label><input required type="date" value={f.fecha_fin} onChange={(e) => setF({ ...f, fecha_fin: e.target.value })} /></div>
             </div>
             <div className="rejilla-2">
               <div>
-                <label>Periodo</label>
-                <select value={f.id_periodo} onChange={(e) => setF({ ...f, id_periodo: e.target.value })}>
+                <label>Periodo *</label>
+                <select required value={f.id_periodo} onChange={(e) => setF({ ...f, id_periodo: e.target.value })}>
                   <option value="">Selecciona…</option>
                   {periodos.map((p) => <option key={p.id_periodo} value={p.id_periodo}>{p.nombre}</option>)}
                 </select>
               </div>
               <div>
-                <label>Instructor titular</label>
-                <select value={f.id_instructor} onChange={(e) => setF({ ...f, id_instructor: e.target.value })}>
+                <label>Instructor titular *</label>
+                <select required value={f.id_instructor} onChange={(e) => setF({ ...f, id_instructor: e.target.value })}>
                   <option value="">Selecciona…</option>
                   {instructores.map((i) => <option key={i.id_usuario} value={i.id_usuario}>{i.nombres} {i.apellidos}</option>)}
                 </select>

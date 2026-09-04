@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 import { api } from "../servicios/api";
 
 const VACIO = { nombres: "", apellidos: "", tipo_documento: "CC", documento: "", correo: "", telefono: "", rol: "aprendiz" };
@@ -29,6 +30,30 @@ export default function Usuarios() {
       const r = await api(`/usuarios/${u.id_usuario}/estado`, { method: "PATCH", body: { estado } });
       setMensaje({ tipo: "exito", texto: r.mensaje }); cargar();
     } catch (e) { setMensaje({ tipo: "error", texto: e.message }); }
+  }
+
+  function leerExcel(e) {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onload = (ev) => {
+      try {
+        const libro = XLSX.read(ev.target.result, { type: "array" });
+        const hoja = libro.Sheets[libro.SheetNames[0]];
+        const filas = XLSX.utils.sheet_to_json(hoja, { header: 1, defval: "" });
+        // Si la primera fila es un encabezado (el documento no es solo dígitos), se omite.
+        const inicio = /^\d+$/.test(String(filas[0]?.[2] ?? "").trim()) ? 0 : 1;
+        const lineas = filas.slice(inicio)
+          .filter((fila) => fila.some((c) => String(c).trim()))
+          .map((fila) => fila.slice(0, 5).map((c) => String(c).trim()).join(";"));
+        setCsv(lineas.join("\n"));
+        setMensaje({ tipo: "exito", texto: `${lineas.length} fila(s) leídas del Excel. Revisa antes de cargar.` });
+      } catch {
+        setMensaje({ tipo: "error", texto: "No se pudo leer el archivo. Verifica que sea un .xlsx válido." });
+      }
+    };
+    lector.readAsArrayBuffer(archivo);
+    e.target.value = "";
   }
 
   async function cargaMasiva() {
@@ -129,9 +154,13 @@ export default function Usuarios() {
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2>Carga masiva de aprendices</h2>
             <p style={{ color: "var(--tinta-suave)", fontSize: 13.5 }}>
-              Pega una fila por aprendiz con el formato:<br />
+              Sube un Excel (.xlsx) con las columnas en este orden: nombres, apellidos, documento, correo, teléfono
+              — con o sin fila de encabezado. O pega el texto directamente abajo, una fila por aprendiz:<br />
               <code>nombres;apellidos;documento;correo;telefono</code>
             </p>
+            <label>Archivo Excel (.xlsx)</label>
+            <input type="file" accept=".xlsx,.xls" onChange={leerExcel} />
+            <label style={{ marginTop: 14 }}>O pega/edita el texto aquí</label>
             <textarea rows={8} value={csv} onChange={(e) => setCsv(e.target.value)}
                       placeholder={"Ana María;García López;1012345678;ana.garcia@soy.sena.edu.co;3001234567"} />
             <div className="acciones-modal">

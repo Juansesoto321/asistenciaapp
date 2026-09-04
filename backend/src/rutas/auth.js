@@ -21,7 +21,7 @@ const validarContrasena = (c) =>
 router.post("/login", async (req, res) => {
   try {
     const { correo, contrasena } = req.body;
-    const r = await pool.query("SELECT * FROM usuario WHERE correo = $1", [correo]);
+    const r = await pool.query("SELECT * FROM usuario WHERE LOWER(correo) = LOWER($1)", [correo]);
     const u = r.rows[0];
     const errorGenerico = { mensaje: "Correo o contraseña incorrectos" };
     if (!u) return res.status(401).json(errorGenerico);
@@ -83,7 +83,7 @@ router.post("/registro", async (req, res) => {
     const r = await pool.query(
       `INSERT INTO usuario (nombres, apellidos, tipo_documento, documento, correo, telefono, contrasena_hash, rol, estado)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pendiente') RETURNING id_usuario`,
-      [nombres, apellidos, tipo_documento || "CC", documento, correo, telefono, hash, rol]
+      [nombres, apellidos, tipo_documento || "CC", documento, correo.toLowerCase(), telefono, hash, rol]
     );
     // Notificar a los administradores
     await pool.query(
@@ -106,7 +106,7 @@ router.post("/registro", async (req, res) => {
 router.post("/recuperar", async (req, res) => {
   try {
     const { correo } = req.body;
-    const r = await pool.query("SELECT id_usuario, nombres FROM usuario WHERE correo = $1", [correo]);
+    const r = await pool.query("SELECT id_usuario, nombres FROM usuario WHERE LOWER(correo) = LOWER($1)", [correo]);
     // Respuesta generica: no revelamos si el correo existe (regla CU-02 A1)
     const respuesta = { mensaje: "Si el correo existe, recibirás un enlace de recuperación" };
     if (!r.rows[0]) return res.json(respuesta);

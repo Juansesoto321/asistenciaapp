@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api, obtenerSesion } from "../servicios/api";
+import IconoHuella from "../componentes/IconoHuella.jsx";
 
 export default function DetalleFicha() {
   const { id } = useParams();
@@ -88,12 +89,12 @@ export default function DetalleFicha() {
               <td>{m.documento}</td>
               <td>{m.correo}</td>
               <td>{m.tiene_huella
-                ? <span className="insignia presente">🫆 Registrada</span>
+                ? <span className="insignia presente"><IconoHuella /> Registrada</span>
                 : <span className="insignia pendiente">Sin registrar</span>}</td>
               <td><span className={`insignia ${m.estado}`}>{m.estado}</span></td>
               <td style={{ display: "flex", gap: 6 }}>
                 {!m.tiene_huella && m.estado === "activa" &&
-                  <button className="boton mini" onClick={() => abrirEnrolar(m)}>🫆 Enrolar huella</button>}
+                  <button className="boton mini" onClick={() => abrirEnrolar(m)}><IconoHuella /> Enrolar huella</button>}
                 {m.tiene_huella && rol === "administrador" &&
                   <button className="boton mini peligro" onClick={() => eliminarHuella(m)}>Eliminar huella</button>}
               </td>
@@ -134,7 +135,7 @@ export default function DetalleFicha() {
       {modal?.enrolar && (
         <div className="superposicion">
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2>🫆 Enrolamiento de huella · {modal.enrolar.nombres} {modal.enrolar.apellidos}</h2>
+            <h2><IconoHuella /> Enrolamiento de huella · {modal.enrolar.nombres} {modal.enrolar.apellidos}</h2>
 
             {pasoEnrolar === 1 && (<>
               <p style={{ fontSize: 13, color: "var(--tinta-suave)", margin: "8px 0" }}>Paso 1 de 3 · Consentimiento informado ({consentimiento?.version})</p>
@@ -157,7 +158,7 @@ export default function DetalleFicha() {
               </div>
               <div className="acciones-modal">
                 <button className="boton suave" onClick={() => setModal(null)}>Cancelar</button>
-                <button className="boton" onClick={capturar}>🫆 Capturar lectura {lecturas.length + 1}</button>
+                <button className="boton" onClick={capturar}><IconoHuella /> Capturar lectura {lecturas.length + 1}</button>
               </div>
             </>)}
 

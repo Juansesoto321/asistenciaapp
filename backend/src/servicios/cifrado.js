@@ -5,7 +5,12 @@
  */
 const crypto = require("crypto");
 
-const CLAVE = Buffer.from(process.env.CLAVE_CIFRADO || "0".repeat(64), "hex");
+if (!/^[0-9a-fA-F]{64}$/.test(process.env.CLAVE_CIFRADO || ""))
+  throw new Error(
+    "CLAVE_CIFRADO debe definirse en el .env como 64 caracteres hexadecimales (32 bytes). " +
+    "Genera una única por entorno con: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+  );
+const CLAVE = Buffer.from(process.env.CLAVE_CIFRADO, "hex");
 
 function cifrar(textoPlano) {
   const iv = crypto.randomBytes(12);

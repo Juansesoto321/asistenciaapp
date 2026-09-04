@@ -84,7 +84,7 @@ CREATE TABLE IF NOT EXISTS ambiente (
 CREATE TABLE IF NOT EXISTS dispositivo (
   id_dispositivo   SERIAL PRIMARY KEY,
   serial           VARCHAR(50) NOT NULL UNIQUE,
-  modelo           VARCHAR(80) NOT NULL DEFAULT 'ZKTeco K50 (simulado)',
+  modelo           VARCHAR(80) NOT NULL DEFAULT 'ZKTeco SenseFace 2A (simulado)',
   id_ambiente      INTEGER REFERENCES ambiente(id_ambiente),
   clave_api        VARCHAR(100) NOT NULL,   -- autentica al dispositivo ante el backend
   estado           VARCHAR(20) NOT NULL DEFAULT 'no_verificado'
@@ -176,6 +176,7 @@ CREATE TABLE IF NOT EXISTS justificacion (
   id_asistencia    INTEGER NOT NULL UNIQUE REFERENCES asistencia(id_asistencia),
   token            VARCHAR(100) NOT NULL UNIQUE,  -- enlace enviado por correo
   expira_en        TIMESTAMPTZ NOT NULL,           -- 72 horas después de la ausencia
+  tipo             VARCHAR(40) CHECK (tipo IN ('cita_medica','incapacidad_medica','calamidad_domestica','diligencia_legal','duelo','otro')),
   descripcion      TEXT,
   nombre_archivo   VARCHAR(255),
   archivo_datos    TEXT,                           -- adjunto en base64 (demo)
@@ -184,6 +185,7 @@ CREATE TABLE IF NOT EXISTS justificacion (
   enviada_en       TIMESTAMPTZ,
   validada_por     INTEGER REFERENCES usuario(id_usuario),
   validada_en      TIMESTAMPTZ,
+  observacion_validacion TEXT, -- motivo que da el instructor/admin, obligatorio al rechazar
   creado_en        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

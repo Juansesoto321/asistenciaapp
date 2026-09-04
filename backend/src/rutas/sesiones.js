@@ -13,6 +13,39 @@ const { autenticar, autorizar } = require("../middleware/autenticar");
 const router = express.Router();
 router.use(autenticar);
 
+// Genera el enlace de justificacion (si no existe ya) + correo + notificacion.
+// Se usa tanto al cerrar sesion (ausentes automaticos) como al marcar "ausente" manualmente.
+async function generarJustificacionYNotificar(cliente, { idAsistencia, idAprendiz, numeroFicha }) {
+  const horasConf = await cliente.query("SELECT valor FROM configuracion WHERE clave = 'horas_justificacion'");
+  const horas = Number(horasConf.rows[0]?.valor || 72);
+  const token = crypto.randomBytes(24).toString("hex");
+  const ins = await cliente.query(
+    `INSERT INTO justificacion (id_asistencia, token, expira_en)
+     VALUES ($1,$2, NOW() + ($3 || ' hours')::interval)
+     ON CONFLICT (id_asistencia) DO NOTHING RETURNING id_justificacion`,
+    [idAsistencia, token, horas]
+  );
+  if (!ins.rows[0]) return; // ya tenia justificacion (ej. re-marcado como ausente)
+
+  const u = await cliente.query("SELECT nombres, correo FROM usuario WHERE id_usuario = $1", [idAprendiz]);
+  const enlace = `${process.env.URL_FRONTEND}/justificar/${token}`;
+  await enviarCorreo({
+    para: u.rows[0].correo,
+    asunto: `AsistenciaApp · Inasistencia registrada (ficha ${numeroFicha})`,
+    html: `<p>Hola ${u.rows[0].nombres},</p>
+           <p>Se registró tu <b>inasistencia</b> a la clase de hoy de la ficha ${numeroFicha}.</p>
+           <p>Si tienes una excusa (por ejemplo, cita médica), cárgala en el siguiente enlace.
+           <b>Disponible solo por ${horas} horas</b>; después quedará como "sin justificación":</p>
+           <p><a href="${enlace}">${enlace}</a></p>`,
+  });
+  await cliente.query(
+    `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje)
+     VALUES ($1,'inasistencia','Inasistencia registrada',
+             'Faltaste a la clase de hoy. Revisa tu correo: tienes ${horas} horas para cargar una justificación.')`,
+    [idAprendiz]
+  );
+}
+
 // Horarios de HOY del instructor, con estado de sesion
 router.get("/hoy", autorizar("instructor", "administrador"), async (req, res) => {
   const dia = new Date().getDay();
@@ -124,36 +157,39 @@ router.post("/:id/asistencia-manual", autorizar("instructor", "administrador"), 
     }
 
     await cliente.query("BEGIN");
-    const existente = await cliente.query(
-      "SELECT id_asistencia, estado FROM asistencia WHERE id_sesion = $1 AND id_aprendiz = $2",
-      [req.params.id, id_aprendiz]
+    // UPSERT atomico: evita la condicion de carrera de "SELECT si existe,
+    // luego INSERT o UPDATE" (dos peticiones casi simultaneas para el mismo
+    // aprendiz -ej. doble clic, o el lector marcando justo en ese momento-
+    // podian pasar ambas el SELECT antes de que cualquiera insertara,
+    // haciendo que la segunda chocara con la restriccion unica).
+    const upsert = await cliente.query(
+      `WITH anterior AS (
+         SELECT estado FROM asistencia WHERE id_sesion = $1 AND id_aprendiz = $2
+       )
+       INSERT INTO asistencia (id_sesion, id_aprendiz, estado, hora_marca, metodo, observacion, registrado_por)
+       VALUES ($1,$2,$3,NOW(),'manual',$4,$5)
+       ON CONFLICT (id_sesion, id_aprendiz) DO UPDATE
+         SET estado = EXCLUDED.estado, metodo = 'manual', observacion = EXCLUDED.observacion,
+             registrado_por = EXCLUDED.registrado_por, hora_marca = COALESCE(asistencia.hora_marca, NOW())
+       RETURNING id_asistencia, (SELECT estado FROM anterior) AS estado_anterior`,
+      [req.params.id, id_aprendiz, estado, motivo, req.usuario.id]
     );
-    let idAsistencia;
-    if (existente.rows[0]) {
-      idAsistencia = existente.rows[0].id_asistencia;
-      await cliente.query(
-        `UPDATE asistencia SET estado = $1, metodo = 'manual', observacion = $2,
-          registrado_por = $3, hora_marca = COALESCE(hora_marca, NOW())
-         WHERE id_asistencia = $4`,
-        [estado, motivo, req.usuario.id, idAsistencia]
+    const idAsistencia = upsert.rows[0].id_asistencia;
+    await cliente.query(
+      `INSERT INTO cambio_asistencia (id_asistencia, estado_anterior, estado_nuevo, motivo, cambiado_por)
+       VALUES ($1,$2,$3,$4,$5)`,
+      [idAsistencia, upsert.rows[0].estado_anterior, estado, motivo, req.usuario.id]
+    );
+    // Si quedo "ausente", dispara el mismo enlace de justificacion + correo que al cerrar sesion
+    if (estado === "ausente") {
+      const f = await cliente.query(
+        `SELECT f.numero_ficha FROM sesion_clase s JOIN horario h ON h.id_horario = s.id_horario
+         JOIN ficha f ON f.id_ficha = h.id_ficha WHERE s.id_sesion = $1`,
+        [req.params.id]
       );
-      await cliente.query(
-        `INSERT INTO cambio_asistencia (id_asistencia, estado_anterior, estado_nuevo, motivo, cambiado_por)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [idAsistencia, existente.rows[0].estado, estado, motivo, req.usuario.id]
-      );
-    } else {
-      const ins = await cliente.query(
-        `INSERT INTO asistencia (id_sesion, id_aprendiz, estado, hora_marca, metodo, observacion, registrado_por)
-         VALUES ($1,$2,$3,NOW(),'manual',$4,$5) RETURNING id_asistencia`,
-        [req.params.id, id_aprendiz, estado, motivo, req.usuario.id]
-      );
-      idAsistencia = ins.rows[0].id_asistencia;
-      await cliente.query(
-        `INSERT INTO cambio_asistencia (id_asistencia, estado_anterior, estado_nuevo, motivo, cambiado_por)
-         VALUES ($1,NULL,$2,$3,$4)`,
-        [idAsistencia, estado, motivo, req.usuario.id]
-      );
+      await generarJustificacionYNotificar(cliente, {
+        idAsistencia, idAprendiz: id_aprendiz, numeroFicha: f.rows[0].numero_ficha,
+      });
     }
     await cliente.query("COMMIT");
 
@@ -205,33 +241,11 @@ router.post("/:id/cerrar", autorizar("instructor", "administrador"), async (req,
       [req.usuario.id, req.params.id]
     );
 
-    // Por cada ausente: enlace de justificacion valido por 72 horas + correo + notificacion
-    const horasConf = await cliente.query("SELECT valor FROM configuracion WHERE clave = 'horas_justificacion'");
-    const horas = Number(horasConf.rows[0]?.valor || 72);
+    // Por cada ausente: enlace de justificacion + correo + notificacion
     for (const a of ausentes.rows) {
-      const token = crypto.randomBytes(24).toString("hex");
-      await cliente.query(
-        `INSERT INTO justificacion (id_asistencia, token, expira_en)
-         VALUES ($1,$2, NOW() + ($3 || ' hours')::interval)`,
-        [a.id_asistencia, token, horas]
-      );
-      const u = await cliente.query("SELECT nombres, correo FROM usuario WHERE id_usuario = $1", [a.id_aprendiz]);
-      const enlace = `${process.env.URL_FRONTEND}/justificar/${token}`;
-      await enviarCorreo({
-        para: u.rows[0].correo,
-        asunto: `AsistenciaApp · Inasistencia registrada (ficha ${s.rows[0].numero_ficha})`,
-        html: `<p>Hola ${u.rows[0].nombres},</p>
-               <p>Se registró tu <b>inasistencia</b> a la clase de hoy de la ficha ${s.rows[0].numero_ficha}.</p>
-               <p>Si tienes una excusa (por ejemplo, cita médica), cárgala en el siguiente enlace.
-               <b>Disponible solo por ${horas} horas</b>; después quedará como "sin justificación":</p>
-               <p><a href="${enlace}">${enlace}</a></p>`,
+      await generarJustificacionYNotificar(cliente, {
+        idAsistencia: a.id_asistencia, idAprendiz: a.id_aprendiz, numeroFicha: s.rows[0].numero_ficha,
       });
-      await cliente.query(
-        `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje)
-         VALUES ($1,'inasistencia','Inasistencia registrada',
-                 'Faltaste a la clase de hoy. Revisa tu correo: tienes ${horas} horas para cargar una justificación.')`,
-        [a.id_aprendiz]
-      );
     }
     await cliente.query("COMMIT");
     await auditar(req.usuario.id, "cerrar_sesion_clase", "sesion_clase", Number(req.params.id), { ausentes: ausentes.rows.length });

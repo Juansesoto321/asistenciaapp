@@ -20,6 +20,8 @@ services:
 
   backend:
     build: ./backend
+    ports:
+      - "4000:4000"   # necesario para que el lector fisico real (ADMS) alcance el backend
     environment:
       DATABASE_URL: postgres://postgres:postgres@basedatos:5432/asistenciaapp
       JWT_SECRETO: ${JWT_SECRETO:-cambia_esta_clave_en_produccion}

@@ -16,24 +16,36 @@ router.get("/notificaciones", async (req, res) => {
   res.json(r.rows);
 });
 router.patch("/notificaciones/:id/leida", async (req, res) => {
-  await pool.query("UPDATE notificacion SET leida = TRUE WHERE id_notificacion = $1 AND id_usuario = $2", [req.params.id, req.usuario.id]);
-  res.json({ ok: true });
+  try {
+    await pool.query("UPDATE notificacion SET leida = TRUE WHERE id_notificacion = $1 AND id_usuario = $2", [req.params.id, req.usuario.id]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ mensaje: "Error al marcar la notificación" });
+  }
 });
 
 // CU-21
 router.post("/soporte", async (req, res) => {
-  const { tipo, descripcion } = req.body;
-  const r = await pool.query(
-    "INSERT INTO ticket_soporte (id_usuario, tipo, descripcion) VALUES ($1,$2,$3) RETURNING id_ticket",
-    [req.usuario.id, tipo, descripcion]
-  );
-  await pool.query(
-    `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje)
-     SELECT id_usuario, 'soporte', 'Nuevo ticket de soporte', 'Ticket #' || $1 || ': ' || $2
-     FROM usuario WHERE rol = 'administrador' AND estado = 'activo'`,
-    [r.rows[0].id_ticket, tipo]
-  );
-  res.status(201).json({ mensaje: `Ticket #${r.rows[0].id_ticket} registrado. Te notificaremos la respuesta`, id_ticket: r.rows[0].id_ticket });
+  try {
+    const { tipo, descripcion } = req.body;
+    if (!tipo || !descripcion?.trim())
+      return res.status(400).json({ mensaje: "Selecciona un tipo y describe el problema" });
+    const r = await pool.query(
+      "INSERT INTO ticket_soporte (id_usuario, tipo, descripcion) VALUES ($1,$2,$3) RETURNING id_ticket",
+      [req.usuario.id, tipo, descripcion]
+    );
+    await pool.query(
+      `INSERT INTO notificacion (id_usuario, tipo, titulo, mensaje)
+       SELECT id_usuario, 'soporte', 'Nuevo ticket de soporte', 'Ticket #' || $1 || ': ' || $2
+       FROM usuario WHERE rol = 'administrador' AND estado = 'activo'`,
+      [r.rows[0].id_ticket, tipo]
+    );
+    res.status(201).json({ mensaje: `Ticket #${r.rows[0].id_ticket} registrado. Te notificaremos la respuesta`, id_ticket: r.rows[0].id_ticket });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ mensaje: "Error al registrar el ticket" });
+  }
 });
 router.get("/soporte", async (req, res) => {
   const propio = req.usuario.rol !== "administrador";
@@ -46,8 +58,16 @@ router.get("/soporte", async (req, res) => {
   res.json(r.rows);
 });
 router.patch("/soporte/:id", autorizar("administrador"), async (req, res) => {
-  await pool.query("UPDATE ticket_soporte SET estado = $1 WHERE id_ticket = $2", [req.body.estado, req.params.id]);
-  res.json({ mensaje: "Ticket actualizado" });
+  try {
+    const { estado } = req.body;
+    if (!["abierto", "en_proceso", "resuelto"].includes(estado))
+      return res.status(400).json({ mensaje: "Estado inválido" });
+    await pool.query("UPDATE ticket_soporte SET estado = $1 WHERE id_ticket = $2", [estado, req.params.id]);
+    res.json({ mensaje: "Ticket actualizado" });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ mensaje: "Error al actualizar el ticket" });
+  }
 });
 
 // Configuracion (tolerancia, % minimo, ventana de justificacion)
@@ -56,14 +76,19 @@ router.get("/configuracion", async (_req, res) => {
   res.json(Object.fromEntries(r.rows.map(f => [f.clave, f.valor])));
 });
 router.put("/configuracion", autorizar("administrador"), async (req, res) => {
-  for (const [clave, valor] of Object.entries(req.body)) {
-    await pool.query(
-      "INSERT INTO configuracion (clave, valor) VALUES ($1,$2) ON CONFLICT (clave) DO UPDATE SET valor = $2",
-      [clave, String(valor)]
-    );
+  try {
+    for (const [clave, valor] of Object.entries(req.body)) {
+      await pool.query(
+        "INSERT INTO configuracion (clave, valor) VALUES ($1,$2) ON CONFLICT (clave) DO UPDATE SET valor = $2",
+        [clave, String(valor)]
+      );
+    }
+    await auditar(req.usuario.id, "actualizar_configuracion", "configuracion", null, req.body);
+    res.json({ mensaje: "Configuración guardada" });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ mensaje: "Error al guardar la configuración" });
   }
-  await auditar(req.usuario.id, "actualizar_configuracion", "configuracion", null, req.body);
-  res.json({ mensaje: "Configuración guardada" });
 });
 
 module.exports = router;
